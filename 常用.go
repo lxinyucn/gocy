@@ -182,10 +182,10 @@ func C取md5(data []byte) string {
 }
 func Cmd5文本(数据 string, 是否大写, 是否十六位 bool) string {
 	ss := C取md5从文本(数据)
-	if 是否大写 == true {
+	if 是否大写 {
 		ss = C到大写(ss)
 	}
-	if 是否十六位 == true {
+	if 是否十六位 {
 		ss = ss[8:24]
 	}
 	return ss

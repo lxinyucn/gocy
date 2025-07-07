@@ -1,9 +1,9 @@
-package z
+package zcb
 
 import (
-	. "github.com/lxinyucn/go-cy"
+	"fmt"
 
-	"github.com/golang/sys/windows/registry"
+	"golang.org/x/sys/windows/registry"
 )
 
 var KEY根类 = registry.CLASSES_ROOT
@@ -18,7 +18,7 @@ func Z取注册项文本(根目录 registry.Key, 目录, 子项 string) string {
 		return "1" + err.Error()
 	}
 	defer key.Close()
-	if exists == false {
+	if !exists {
 		return "2"
 	}
 	QWQ, _, _ := key.GetStringValue(子项)
@@ -30,7 +30,7 @@ func Z取注册项数值(根目录 registry.Key, 目录, 子项 string) int64 {
 		return 0
 	}
 	defer key.Close()
-	if exists == false {
+	if !exists {
 		return 0
 	}
 	QWQ, _, _ := key.GetIntegerValue(子项)
@@ -39,10 +39,10 @@ func Z取注册项数值(根目录 registry.Key, 目录, 子项 string) int64 {
 func Z写注册项文本(根目录 registry.Key, 目录, 子项, 内容 string) {
 	key, _, err := registry.CreateKey(根目录, 目录, registry.QUERY_VALUE|registry.ENUMERATE_SUB_KEYS)
 	if err != nil {
-		C日记("写err", err, 目录, 子项, 内容)
+		fmt.Println("写err", err, 目录, 子项, 内容)
 		return
 	}
-	C日记("写", 目录, 子项, 内容)
+	fmt.Println("写", 目录, 子项, 内容)
 	defer key.Close()
 	key.SetStringValue(子项, 内容)
 }
@@ -60,7 +60,7 @@ func Z删除注册项(根目录 registry.Key, 目录, 子项 string) {
 		return
 	}
 	defer key.Close()
-	if exists == false {
+	if !exists {
 		return
 	}
 	subkey, _, _ := registry.CreateKey(key, 子项, registry.ALL_ACCESS)
@@ -69,7 +69,7 @@ func Z删除注册项(根目录 registry.Key, 目录, 子项 string) {
 func Z添加右键打开(软件名, 路径, 参数 string) bool {
 	//C日记(55)
 	if 软件名 == "" || 路径 == "" {
-		C日记("qwq", 软件名, 路径)
+		fmt.Println("qwq", 软件名, 路径)
 		return false
 	}
 	Z写注册项文本(KEY根类, "*\\shell\\"+软件名+"\\command", "", 路径+" %1"+参数)
