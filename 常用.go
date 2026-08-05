@@ -3,6 +3,7 @@ package gocy
 import (
 	"crypto/md5"
 	"crypto/rc4"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -10,14 +11,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/gogf/gf/encoding/gbase64"
-	"github.com/gogf/gf/encoding/gurl"
-	"github.com/gogf/gf/os/gtime"
-	"github.com/gogf/gf/util/gconv"
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
@@ -29,7 +28,7 @@ import (
 //
 // 操作系统需求： Windows
 func CBase64编码(data []byte) string {
-	return gbase64.EncodeToString(data)
+	return base64.StdEncoding.EncodeToString(data)
 }
 
 // 调用格式： 〈字节集〉 Base64解码 （文本型 解码内容，［文本型 编码表］） - E2EE互联网服务器套件2.2.3->文本处理
@@ -40,8 +39,8 @@ func CBase64编码(data []byte) string {
 //
 // 操作系统需求： Windows
 func CBase64解码(data string) string {
-	str, _ := gbase64.DecodeToString(data)
-	return str
+	str, _ := base64.StdEncoding.DecodeString(data)
+	return string(str)
 }
 
 // 调用格式： 〈文本型〉 URL编码 （文本型 编码文本，［文本型 编码格式］） - E2EE互联网服务器套件2.2.3->文本处理
@@ -51,27 +50,7 @@ func CBase64解码(data string) string {
 // 参数<2>的名称为“编码格式”，类型为“文本型（text）”，可以被省略。指定编码格式。可使用“#文本编码格式_”开头的常量指定。如果为空则默认原始编码。
 //
 // 操作系统需求： Windows
-func CURL编码(str string) string {
-	return gurl.Encode(str)
-}
-
-// 调用格式： 〈文本型〉 URL解码 （文本型 解码文本，［文本型 编码格式］） - E2EE互联网服务器套件2.2.3->文本处理
-// 英文名称：URLDecode
-// 解码URL内容。本命令为初级命令。
-// 参数<1>的名称为“解码文本”，类型为“文本型（text）”。要进行URL编码的文本内容。
-// 参数<2>的名称为“编码格式”，类型为“文本型（text）”，可以被省略。指定编码格式。可使用“#文本编码格式_”开头的常量指定。如果为空则默认为原始的编码。
-//
-// 操作系统需求： Windows
-func CURL解码(str string) string {
-	s, _ := gurl.Decode(str)
-	return s
-}
-
 // component -1: all; 1: scheme; 2: host; 4: port; 8: user; 16: pass; 32: path; 64: query; 128: fragment. See http://php.net/manual/en/function.parse-url.php.
-func CURL解析(str string, component int) map[string]string {
-	s, _ := gurl.ParseURL(str, component)
-	return s
-}
 func C编码_utf8到gbk(str string) string {
 	gbkData, _ := simplifiedchinese.GBK.NewEncoder().Bytes([]byte(str)) //使用官方库将utf-8转换为gbk
 	return string(gbkData)
@@ -93,13 +72,13 @@ func C延时(毫秒 int64) {
 *    C时间now
  */
 func C时间now() string {
-	return gtime.Now().Format("YmdHis")
+	return cformat(time.Now(), "YmdHis")
 }
 
 // 调用格式： 〈文本型〉 C时间nowF （文本型 时间格式）
 // 参数<1>的名称为“解码文本”，类型为“文本型（text）”。 时间格式 默认为 "Y-m-d H:i:s"
 func C时间nowF(格式 string) string {
-	return gtime.Now().Format(C选择文本(格式 == "", "Y-m-d H:i:s", 格式))
+	return cformat(time.Now(), C选择文本(格式 == "", "Y-m-d H:i:s", 格式))
 }
 
 /*
@@ -321,29 +300,191 @@ func C到小写(value string) string {
 	func C到半角(value string) string {
 		return dBCtoSBCNew(value)
 	}
-
-	func C到整数(value interface{}) int64 {
-		return gconv.Int64(value)
-	}
 */
 func C到字节集(value interface{}) []byte {
-	return gconv.Bytes(value)
+	return []byte(C到文本(value))
 }
 func C到字节(value interface{}) byte {
-	return gconv.Byte(value)
+	s := C到文本(value)
+	if len(s) > 0 {
+		return s[0]
+	}
+	return 0
 }
 func C到整数(value interface{}) int64 {
-	return gconv.Int64(value)
+	switch v := value.(type) {
+	case int:
+		return int64(v)
+	case int8:
+		return int64(v)
+	case int16:
+		return int64(v)
+	case int32:
+		return int64(v)
+	case int64:
+		return v
+	case uint:
+		return int64(v)
+	case uint8:
+		return int64(v)
+	case uint16:
+		return int64(v)
+	case uint32:
+		return int64(v)
+	case uint64:
+		return int64(v)
+	case float32:
+		return int64(v)
+	case float64:
+		return int64(v)
+	case string:
+		n, _ := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+		return n
+	case bool:
+		if v {
+			return 1
+		}
+		return 0
+	}
+	return 0
 }
 
 func C到数值(value interface{}) float64 {
-	return gconv.Float64(value)
+	switch v := value.(type) {
+	case float32:
+		return float64(v)
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case int64:
+		return float64(v)
+	case string:
+		f, _ := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		return f
+	}
+	return 0
 }
 func C到文本(value interface{}) string {
-	return gconv.String(value)
+	if value == nil {
+		return ""
+	}
+	switch v := value.(type) {
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	case int:
+		return strconv.FormatInt(int64(v), 10)
+	case int8:
+		return strconv.FormatInt(int64(v), 10)
+	case int16:
+		return strconv.FormatInt(int64(v), 10)
+	case int32:
+		return strconv.FormatInt(int64(v), 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case uint:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case float32:
+		return strconv.FormatFloat(float64(v), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(v)
+	}
+	return fmt.Sprintf("%v", value)
 }
 func C到结构体(待转换的参数 interface{}, 结构体指针 interface{}) error {
-	return gconv.Struct(待转换的参数, 结构体指针)
+	return structFromMap(待转换的参数, 结构体指针)
+}
+
+// structFromMap 将 map[string]interface{} 填充到结构体指针。
+func structFromMap(src interface{}, dst interface{}) error {
+	m, ok := src.(map[string]interface{})
+	if !ok {
+		if sm, ok2 := src.(map[string]string); ok2 {
+			nm := make(map[string]interface{}, len(sm))
+			for k, v := range sm {
+				nm[k] = v
+			}
+			m = nm
+		} else {
+			return fmt.Errorf("不支持的源类型: %T", src)
+		}
+	}
+	rv := reflect.ValueOf(dst)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return fmt.Errorf("目标必须为非空指针")
+	}
+	rv = rv.Elem()
+	if rv.Kind() != reflect.Struct {
+		return fmt.Errorf("目标必须指向结构体")
+	}
+	rt := rv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		name := fieldName(field)
+		val, ok := m[name]
+		if !ok {
+			val, ok = m[field.Name]
+			if !ok {
+				continue
+			}
+		}
+		fv := rv.Field(i)
+		if !fv.CanSet() {
+			continue
+		}
+		setValue(fv, val)
+	}
+	return nil
+}
+
+func fieldName(f reflect.StructField) string {
+	tag := f.Tag.Get("json")
+	if tag == "" {
+		return f.Name
+	}
+	if idx := strings.Index(tag, ","); idx > 0 {
+		return tag[:idx]
+	}
+	return tag
+}
+
+func setValue(fv reflect.Value, val interface{}) {
+	if val == nil {
+		return
+	}
+	switch fv.Kind() {
+	case reflect.String:
+		fv.SetString(C到文本(val))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		fv.SetInt(C到整数(val))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		fv.SetUint(uint64(C到整数(val)))
+	case reflect.Float32, reflect.Float64:
+		fv.SetFloat(C到数值(val))
+	case reflect.Bool:
+		switch v := val.(type) {
+		case bool:
+			fv.SetBool(v)
+		case string:
+			b, _ := strconv.ParseBool(strings.TrimSpace(v))
+			fv.SetBool(b)
+		}
+	}
 }
 
 // 调用格式： 〈文本型〉 删首空 （文本型 欲删除空格的文本） - 系统核心支持库->文本操作
@@ -441,7 +582,7 @@ func C取命令行() []string {
 }
 func C读环境变量(环境变量名称 string, 默认值 ...interface{}) string {
 	var def string
-	if len(默认值) > 1 {
+	if len(默认值) > 0 {
 		def = C到文本(默认值[0])
 	}
 	e := os.Getenv(环境变量名称)
